@@ -1622,7 +1622,7 @@ pub const Type = struct {
     /// may return false positives.
     pub fn hasRuntimeBitsAdvanced(
         ty: Type,
-        mod: *const Module,
+        mod: *Module,
         ignore_comptime_only: bool,
         strat: AbiAlignmentAdvancedStrat,
     ) RuntimeBitsError!bool {
@@ -1801,7 +1801,7 @@ pub const Type = struct {
                 return enum_simple.fields.count() >= 2;
             },
             .enum_numbered, .enum_nonexhaustive => {
-                const int_tag_ty = ty.intTagType();
+                const int_tag_ty = try ty.intTagType(mod);
                 return int_tag_ty.hasRuntimeBitsAdvanced(mod, ignore_comptime_only, strat);
             },
 
@@ -1867,7 +1867,7 @@ pub const Type = struct {
     /// true if and only if the type has a well-defined memory layout
     /// readFrom/writeToMemory are supported only for types with a well-
     /// defined memory layout
-    pub fn hasWellDefinedLayout(ty: Type, mod: *const Module) bool {
+    pub fn hasWellDefinedLayout(ty: Type, mod: *Module) bool {
         if (ty.ip_index != .none) return switch (mod.intern_pool.indexToKey(ty.ip_index)) {
             .int_type => true,
             .ptr_type => true,
@@ -1969,15 +1969,15 @@ pub const Type = struct {
         };
     }
 
-    pub fn hasRuntimeBits(ty: Type, mod: *const Module) bool {
+    pub fn hasRuntimeBits(ty: Type, mod: *Module) bool {
         return hasRuntimeBitsAdvanced(ty, mod, false, .eager) catch unreachable;
     }
 
-    pub fn hasRuntimeBitsIgnoreComptime(ty: Type, mod: *const Module) bool {
+    pub fn hasRuntimeBitsIgnoreComptime(ty: Type, mod: *Module) bool {
         return hasRuntimeBitsAdvanced(ty, mod, true, .eager) catch unreachable;
     }
 
-    pub fn isFnOrHasRuntimeBits(ty: Type, mod: *const Module) bool {
+    pub fn isFnOrHasRuntimeBits(ty: Type, mod: *Module) bool {
         switch (ty.zigTypeTag(mod)) {
             .Fn => {
                 const fn_info = ty.fnInfo();
@@ -1997,7 +1997,7 @@ pub const Type = struct {
     }
 
     /// Same as `isFnOrHasRuntimeBits` but comptime-only types may return a false positive.
-    pub fn isFnOrHasRuntimeBitsIgnoreComptime(ty: Type, mod: *const Module) bool {
+    pub fn isFnOrHasRuntimeBitsIgnoreComptime(ty: Type, mod: *Module) bool {
         return switch (ty.zigTypeTag(mod)) {
             .Fn => true,
             else => return ty.hasRuntimeBitsIgnoreComptime(mod),
@@ -2036,11 +2036,11 @@ pub const Type = struct {
     }
 
     /// Returns 0 if the pointer is naturally aligned and the element type is 0-bit.
-    pub fn ptrAlignment(ty: Type, mod: *const Module) u32 {
+    pub fn ptrAlignment(ty: Type, mod: *Module) u32 {
         return ptrAlignmentAdvanced(ty, mod, null) catch unreachable;
     }
 
-    pub fn ptrAlignmentAdvanced(ty: Type, mod: *const Module, opt_sema: ?*Sema) !u32 {
+    pub fn ptrAlignmentAdvanced(ty: Type, mod: *Module, opt_sema: ?*Sema) !u32 {
         switch (ty.ip_index) {
             .none => switch (ty.tag()) {
                 .pointer => {
@@ -2089,7 +2089,7 @@ pub const Type = struct {
     }
 
     /// Returns 0 for 0-bit types.
-    pub fn abiAlignment(ty: Type, mod: *const Module) u32 {
+    pub fn abiAlignment(ty: Type, mod: *Module) u32 {
         return (ty.abiAlignmentAdvanced(mod, .eager) catch unreachable).scalar;
     }
 
@@ -2120,7 +2120,7 @@ pub const Type = struct {
     /// necessary, possibly returning a CompileError.
     pub fn abiAlignmentAdvanced(
         ty: Type,
-        mod: *const Module,
+        mod: *Module,
         strat: AbiAlignmentAdvancedStrat,
     ) Module.CompileError!AbiAlignmentAdvanced {
         const target = mod.getTarget();
@@ -2336,7 +2336,7 @@ pub const Type = struct {
             },
 
             .enum_full, .enum_nonexhaustive, .enum_simple, .enum_numbered => {
-                const int_tag_ty = ty.intTagType();
+                const int_tag_ty = try ty.intTagType(mod);
                 return AbiAlignmentAdvanced{ .scalar = int_tag_ty.abiAlignment(mod) };
             },
             .@"union" => {
@@ -2362,7 +2362,7 @@ pub const Type = struct {
 
     fn abiAlignmentAdvancedErrorUnion(
         ty: Type,
-        mod: *const Module,
+        mod: *Module,
         strat: AbiAlignmentAdvancedStrat,
     ) Module.CompileError!AbiAlignmentAdvanced {
         // This code needs to be kept in sync with the equivalent switch prong
@@ -2398,7 +2398,7 @@ pub const Type = struct {
 
     fn abiAlignmentAdvancedOptional(
         ty: Type,
-        mod: *const Module,
+        mod: *Module,
         strat: AbiAlignmentAdvancedStrat,
     ) Module.CompileError!AbiAlignmentAdvanced {
         const target = mod.getTarget();
@@ -2430,7 +2430,7 @@ pub const Type = struct {
 
     pub fn abiAlignmentAdvancedUnion(
         ty: Type,
-        mod: *const Module,
+        mod: *Module,
         strat: AbiAlignmentAdvancedStrat,
         union_obj: *Module.Union,
         have_tag: bool,
@@ -2495,7 +2495,7 @@ pub const Type = struct {
 
     /// Asserts the type has the ABI size already resolved.
     /// Types that return false for hasRuntimeBits() return 0.
-    pub fn abiSize(ty: Type, mod: *const Module) u64 {
+    pub fn abiSize(ty: Type, mod: *Module) u64 {
         return (abiSizeAdvanced(ty, mod, .eager) catch unreachable).scalar;
     }
 
@@ -2512,7 +2512,7 @@ pub const Type = struct {
     /// necessary, possibly returning a CompileError.
     pub fn abiSizeAdvanced(
         ty: Type,
-        mod: *const Module,
+        mod: *Module,
         strat: AbiAlignmentAdvancedStrat,
     ) Module.CompileError!AbiSizeAdvanced {
         const target = mod.getTarget();
@@ -2680,7 +2680,7 @@ pub const Type = struct {
             },
 
             .enum_simple, .enum_full, .enum_nonexhaustive, .enum_numbered => {
-                const int_tag_ty = ty.intTagType();
+                const int_tag_ty = try ty.intTagType(mod);
                 return AbiSizeAdvanced{ .scalar = int_tag_ty.abiSize(mod) };
             },
             .@"union" => {
@@ -2773,7 +2773,7 @@ pub const Type = struct {
 
     pub fn abiSizeAdvancedUnion(
         ty: Type,
-        mod: *const Module,
+        mod: *Module,
         strat: AbiAlignmentAdvancedStrat,
         union_obj: *Module.Union,
         have_tag: bool,
@@ -2792,7 +2792,7 @@ pub const Type = struct {
 
     fn abiSizeAdvancedOptional(
         ty: Type,
-        mod: *const Module,
+        mod: *Module,
         strat: AbiAlignmentAdvancedStrat,
     ) Module.CompileError!AbiSizeAdvanced {
         const child_ty = ty.optionalChild(mod);
@@ -2840,7 +2840,7 @@ pub const Type = struct {
         );
     }
 
-    pub fn bitSize(ty: Type, mod: *const Module) u64 {
+    pub fn bitSize(ty: Type, mod: *Module) u64 {
         return bitSizeAdvanced(ty, mod, null) catch unreachable;
     }
 
@@ -2849,7 +2849,7 @@ pub const Type = struct {
     /// the type is fully resolved, and there will be no error, guaranteed.
     pub fn bitSizeAdvanced(
         ty: Type,
-        mod: *const Module,
+        mod: *Module,
         opt_sema: ?*Sema,
     ) Module.CompileError!u64 {
         const target = mod.getTarget();
@@ -2970,7 +2970,7 @@ pub const Type = struct {
             },
 
             .enum_simple, .enum_full, .enum_nonexhaustive, .enum_numbered => {
-                const int_tag_ty = ty.intTagType();
+                const int_tag_ty = try ty.intTagType(mod);
                 return try bitSizeAdvanced(int_tag_ty, mod, opt_sema);
             },
 
@@ -3486,11 +3486,11 @@ pub const Type = struct {
         return union_obj.fields.getIndex(name);
     }
 
-    pub fn unionHasAllZeroBitFieldTypes(ty: Type, mod: *const Module) bool {
+    pub fn unionHasAllZeroBitFieldTypes(ty: Type, mod: *Module) bool {
         return ty.cast(Payload.Union).?.data.hasAllZeroBitFieldTypes(mod);
     }
 
-    pub fn unionGetLayout(ty: Type, mod: *const Module) Module.Union.Layout {
+    pub fn unionGetLayout(ty: Type, mod: *Module) Module.Union.Layout {
         switch (ty.tag()) {
             .@"union" => {
                 const union_obj = ty.castTag(.@"union").?.data;
@@ -4441,24 +4441,18 @@ pub const Type = struct {
     }
 
     /// Asserts the type is an enum or a union.
-    pub fn intTagType(ty: Type) Type {
+    pub fn intTagType(ty: Type, mod: *Module) !Type {
         switch (ty.tag()) {
             .enum_full, .enum_nonexhaustive => return ty.cast(Payload.EnumFull).?.data.tag_ty,
             .enum_numbered => return ty.castTag(.enum_numbered).?.data.tag_ty,
             .enum_simple => {
-                @panic("TODO move enum_simple to use the intern pool");
-                //const enum_simple = ty.castTag(.enum_simple).?.data;
-                //const field_count = enum_simple.fields.count();
-                //const bits: u16 = if (field_count == 0) 0 else std.math.log2_int_ceil(usize, field_count);
-                //buffer.* = .{
-                //    .base = .{ .tag = .int_unsigned },
-                //    .data = bits,
-                //};
-                //return Type.initPayload(&buffer.base);
+                const enum_simple = ty.castTag(.enum_simple).?.data;
+                const field_count = enum_simple.fields.count();
+                const bits: u16 = if (field_count == 0) 0 else std.math.log2_int_ceil(usize, field_count);
+                return mod.intType(.unsigned, bits);
             },
             .union_tagged => {
-                @panic("TODO move union_tagged to use the intern pool");
-                //return ty.castTag(.union_tagged).?.data.tag_ty.intTagType(buffer),
+                return ty.castTag(.union_tagged).?.data.tag_ty.intTagType(mod);
             },
             else => unreachable,
         }
@@ -4641,7 +4635,7 @@ pub const Type = struct {
         }
     }
 
-    pub fn structFieldAlign(ty: Type, index: usize, mod: *const Module) u32 {
+    pub fn structFieldAlign(ty: Type, index: usize, mod: *Module) u32 {
         switch (ty.tag()) {
             .@"struct" => {
                 const struct_obj = ty.castTag(.@"struct").?.data;
@@ -4731,7 +4725,7 @@ pub const Type = struct {
         }
     }
 
-    pub fn packedStructFieldByteOffset(ty: Type, field_index: usize, mod: *const Module) u32 {
+    pub fn packedStructFieldByteOffset(ty: Type, field_index: usize, mod: *Module) u32 {
         const struct_obj = ty.castTag(.@"struct").?.data;
         assert(struct_obj.layout == .Packed);
         comptime assert(Type.packed_struct_layout_version == 2);
@@ -4763,7 +4757,7 @@ pub const Type = struct {
         offset: u64 = 0,
         big_align: u32 = 0,
         struct_obj: *Module.Struct,
-        module: *const Module,
+        module: *Module,
 
         pub fn next(it: *StructOffsetIterator) ?FieldOffset {
             const mod = it.module;
@@ -4792,7 +4786,7 @@ pub const Type = struct {
 
     /// Get an iterator that iterates over all the struct field, returning the field and
     /// offset of that field. Asserts that the type is a non-packed struct.
-    pub fn iterateStructOffsets(ty: Type, mod: *const Module) StructOffsetIterator {
+    pub fn iterateStructOffsets(ty: Type, mod: *Module) StructOffsetIterator {
         const struct_obj = ty.castTag(.@"struct").?.data;
         assert(struct_obj.haveLayout());
         assert(struct_obj.layout != .Packed);
@@ -4800,7 +4794,7 @@ pub const Type = struct {
     }
 
     /// Supports structs and unions.
-    pub fn structFieldOffset(ty: Type, index: usize, mod: *const Module) u64 {
+    pub fn structFieldOffset(ty: Type, index: usize, mod: *Module) u64 {
         switch (ty.tag()) {
             .@"struct" => {
                 const struct_obj = ty.castTag(.@"struct").?.data;
@@ -5245,7 +5239,7 @@ pub const Type = struct {
 
                 pub const VectorIndex = InternPool.Key.PtrType.VectorIndex;
 
-                pub fn alignment(data: Data, mod: *const Module) u32 {
+                pub fn alignment(data: Data, mod: *Module) u32 {
                     if (data.@"align" != 0) return data.@"align";
                     return abiAlignment(data.pointee_type, mod);
                 }
