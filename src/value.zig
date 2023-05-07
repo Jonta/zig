@@ -2635,6 +2635,10 @@ pub const Value = struct {
         }
     }
 
+    pub fn isRuntimeValue(val: Value) bool {
+        return val.ip_index == .none and val.tag() == .runtime_value;
+    }
+
     pub fn tagIsVariable(val: Value) bool {
         return val.ip_index == .none and val.tag() == .variable;
     }
@@ -3412,7 +3416,7 @@ pub const Value = struct {
         if (lhs.isUndef() or rhs.isUndef()) return Value.undef;
 
         const anded = try bitwiseAnd(lhs, rhs, ty, arena, mod);
-        const all_ones = if (ty.isSignedInt(mod)) try mod.intValue(ty, -1) else try ty.maxInt(mod);
+        const all_ones = if (ty.isSignedInt(mod)) try mod.intValue(ty, -1) else try ty.maxInt(mod, ty);
         return bitwiseXor(anded, all_ones, ty, arena, mod);
     }
 
@@ -5171,6 +5175,10 @@ pub const Value = struct {
 
     pub const BigIntSpace = InternPool.Key.Int.Storage.BigIntSpace;
 
+    pub const zero_u8: Value = .{ .ip_index = .zero_u8, .legacy = undefined };
+    pub const zero_comptime_int: Value = .{ .ip_index = .zero, .legacy = undefined };
+    pub const one_comptime_int: Value = .{ .ip_index = .one, .legacy = undefined };
+    pub const negative_one_comptime_int: Value = .{ .ip_index = .negative_one, .legacy = undefined };
     pub const undef: Value = .{ .ip_index = .undef, .legacy = undefined };
     pub const float_zero: Value = .{ .ip_index = .zero, .legacy = undefined }; // TODO: replace this!
     pub const @"void": Value = .{ .ip_index = .void_value, .legacy = undefined };
