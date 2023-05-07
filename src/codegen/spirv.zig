@@ -230,7 +230,7 @@ pub const DeclGen = struct {
     /// Fetch the result-id for a previously generated instruction or constant.
     fn resolve(self: *DeclGen, inst: Air.Inst.Ref) !IdRef {
         const mod = self.module;
-        if (self.air.value(inst, mod)) |val| {
+        if (try self.air.value(inst, mod)) |val| {
             const ty = self.typeOf(inst);
             if (ty.zigTypeTag(mod) == .Fn) {
                 const fn_decl_index = switch (val.tag()) {
@@ -551,7 +551,7 @@ pub const DeclGen = struct {
                     // TODO: Properly lower function pointers. For now we are going to hack around it and
                     // just generate an empty pointer. Function pointers are represented by usize for now,
                     // though.
-                    try self.addInt(Type.usize, Value.zero);
+                    try self.addInt(Type.usize, try dg.module.intValue(Type.usize, 0));
                     return;
                 },
                 .extern_fn => unreachable, // TODO
@@ -764,7 +764,7 @@ pub const DeclGen = struct {
                 .ErrorUnion => {
                     const payload_ty = ty.errorUnionPayload();
                     const is_pl = val.errorUnionIsPayload();
-                    const error_val = if (!is_pl) val else Value.zero;
+                    const error_val = if (!is_pl) val else try mod.intValue(Type.anyerror, 0);
 
                     if (!payload_ty.hasRuntimeBitsIgnoreComptime(mod)) {
                         return try self.lower(Type.anyerror, error_val);
@@ -2532,7 +2532,7 @@ pub const DeclGen = struct {
                 const label = IdRef{ .id = first_case_label.id + case_i };
 
                 for (items) |item| {
-                    const value = self.air.value(item, mod) orelse {
+                    const value = (try self.air.value(item, mod)) orelse {
                         return self.todo("switch on runtime value???", .{});
                     };
                     const int_val = switch (cond_ty.zigTypeTag(mod)) {

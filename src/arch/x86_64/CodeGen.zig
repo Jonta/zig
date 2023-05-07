@@ -6493,7 +6493,7 @@ fn airCall(self: *Self, inst: Air.Inst.Index, modifier: std.builtin.CallModifier
 
     // Due to incremental compilation, how function calls are generated depends
     // on linking.
-    if (self.air.value(callee, mod)) |func_value| {
+    if (try self.air.value(callee, mod)) |func_value| {
         if (func_value.castTag(.function)) |func_payload| {
             const func = func_payload.data;
 
@@ -9047,7 +9047,7 @@ fn airAggregateInit(self: *Self, inst: Air.Inst.Index) !void {
                         .{ .immediate = result_ty.abiSize(mod) },
                     );
                     for (elements, 0..) |elem, elem_i| {
-                        if (result_ty.structFieldValueComptime(mod, elem_i) != null) continue;
+                        if ((try result_ty.structFieldValueComptime(mod, elem_i)) != null) continue;
 
                         const elem_ty = result_ty.structFieldType(elem_i);
                         const elem_bit_size = @intCast(u32, elem_ty.bitSize(mod));
@@ -9119,7 +9119,7 @@ fn airAggregateInit(self: *Self, inst: Air.Inst.Index) !void {
                         }
                     }
                 } else for (elements, 0..) |elem, elem_i| {
-                    if (result_ty.structFieldValueComptime(mod, elem_i) != null) continue;
+                    if ((try result_ty.structFieldValueComptime(mod, elem_i)) != null) continue;
 
                     const elem_ty = result_ty.structFieldType(elem_i);
                     const elem_off = @intCast(i32, result_ty.structFieldOffset(elem_i, mod));
@@ -9198,7 +9198,7 @@ fn resolveInst(self: *Self, ref: Air.Inst.Ref) InnerError!MCValue {
                 const gop = try self.const_tracking.getOrPut(self.gpa, inst);
                 if (!gop.found_existing) gop.value_ptr.* = InstTracking.init(try self.genTypedValue(.{
                     .ty = ty,
-                    .val = self.air.value(ref, mod).?,
+                    .val = (try self.air.value(ref, mod)).?,
                 }));
                 break :tracking gop.value_ptr;
             },
@@ -9211,7 +9211,7 @@ fn resolveInst(self: *Self, ref: Air.Inst.Ref) InnerError!MCValue {
         }
     }
 
-    return self.genTypedValue(.{ .ty = ty, .val = self.air.value(ref, mod).? });
+    return self.genTypedValue(.{ .ty = ty, .val = (try self.air.value(ref, mod)).? });
 }
 
 fn getResolvedInstValue(self: *Self, inst: Air.Inst.Index) *InstTracking {
