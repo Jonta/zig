@@ -2647,6 +2647,14 @@ pub const Value = struct {
         }
     }
 
+    pub fn isLazyAlign(val: Value) bool {
+        return val.ip_index == .none and val.tag() == .lazy_align;
+    }
+
+    pub fn isLazySize(val: Value) bool {
+        return val.ip_index == .none and val.tag() == .lazy_size;
+    }
+
     pub fn isRuntimeValue(val: Value) bool {
         return val.ip_index == .none and val.tag() == .runtime_value;
     }

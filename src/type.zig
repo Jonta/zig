@@ -2107,10 +2107,11 @@ pub const Type = struct {
     }
 
     /// May capture a reference to `ty`.
+    /// Returned value has type `comptime_int`.
     pub fn lazyAbiAlignment(ty: Type, mod: *Module, arena: Allocator) !Value {
         switch (try ty.abiAlignmentAdvanced(mod, .{ .lazy = arena })) {
             .val => |val| return val,
-            .scalar => |x| return mod.intValue(ty, x),
+            .scalar => |x| return mod.intValue(Type.comptime_int, x),
         }
     }
 
@@ -5464,9 +5465,16 @@ pub const Type = struct {
             }
         }
 
-        if (d.pointee_type.ip_index != .none and
-            (d.sentinel == null or d.sentinel.?.ip_index != .none))
-        {
+        ip: {
+            if (d.pointee_type.ip_index == .none) break :ip;
+
+            if (d.sentinel) |s| {
+                switch (s.ip_index) {
+                    .none, .null_value => break :ip,
+                    else => {},
+                }
+            }
+
             return mod.ptrType(.{
                 .elem_type = d.pointee_type.ip_index,
                 .sentinel = if (d.sentinel) |s| s.ip_index else .none,
