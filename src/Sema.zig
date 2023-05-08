@@ -31468,6 +31468,7 @@ pub fn resolveTypeRequiresComptime(sema: *Sema, ty: Type) CompileError!bool {
             .extern_func => unreachable,
             .int => unreachable,
             .ptr => unreachable,
+            .opt => unreachable,
             .enum_tag => unreachable,
         },
     };
@@ -32981,6 +32982,7 @@ pub fn typeHasOnePossibleValue(sema: *Sema, ty: Type) CompileError!?Value {
             .extern_func => unreachable,
             .int => unreachable,
             .ptr => unreachable,
+            .opt => unreachable,
             .enum_tag => unreachable,
         },
     }
@@ -33550,6 +33552,7 @@ pub fn typeRequiresComptime(sema: *Sema, ty: Type) CompileError!bool {
             .extern_func => unreachable,
             .int => unreachable,
             .ptr => unreachable,
+            .opt => unreachable,
             .enum_tag => unreachable,
         },
     };
