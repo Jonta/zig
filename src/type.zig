@@ -4051,7 +4051,7 @@ pub const Type = struct {
                     switch (enum_full.fields.count()) {
                         0 => return Value.@"unreachable",
                         1 => if (enum_full.values.count() == 0) {
-                            return try mod.intValue(ty, 0); // auto-numbered
+                            return Value.enum_field_0; // auto-numbered
                         } else {
                             return enum_full.values.keys()[0];
                         },
@@ -4062,14 +4062,14 @@ pub const Type = struct {
                     const enum_simple = ty.castTag(.enum_simple).?.data;
                     switch (enum_simple.fields.count()) {
                         0 => return Value.@"unreachable",
-                        1 => return try mod.intValue(ty, 0),
+                        1 => return Value.enum_field_0,
                         else => return null,
                     }
                 },
                 .enum_nonexhaustive => {
                     const tag_ty = ty.castTag(.enum_nonexhaustive).?.data.tag_ty;
                     if (!tag_ty.hasRuntimeBits(mod)) {
-                        return try mod.intValue(ty, 0);
+                        return Value.enum_field_0;
                     } else {
                         return null;
                     }
