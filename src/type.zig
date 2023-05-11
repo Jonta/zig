@@ -82,6 +82,7 @@ pub const Type = struct {
                 .struct_type => return .Struct,
                 .union_type => return .Union,
                 .opaque_type => return .Opaque,
+                .enum_type => return .Enum,
                 .simple_type => |s| switch (s) {
                     .f16,
                     .f32,
@@ -1515,6 +1516,7 @@ pub const Type = struct {
                     const decl = mod.declPtr(opaque_type.decl);
                     try decl.renderFullyQualifiedName(mod, writer);
                 },
+                .enum_type => @panic("TODO"),
 
                 // values, not types
                 .un => unreachable,
@@ -1782,6 +1784,7 @@ pub const Type = struct {
                 },
 
                 .opaque_type => true,
+                .enum_type => @panic("TODO"),
 
                 // values, not types
                 .un => unreachable,
@@ -1901,6 +1904,7 @@ pub const Type = struct {
                     .tagged => false,
                 },
                 .opaque_type => false,
+                .enum_type => @panic("TODO"),
 
                 // values, not types
                 .un => unreachable,
@@ -2298,6 +2302,7 @@ pub const Type = struct {
                     return abiAlignmentAdvancedUnion(ty, mod, strat, union_obj, union_type.hasTag());
                 },
                 .opaque_type => return AbiAlignmentAdvanced{ .scalar = 1 },
+                .enum_type => @panic("TODO"),
 
                 // values, not types
                 .un => unreachable,
@@ -2720,6 +2725,7 @@ pub const Type = struct {
                     return abiSizeAdvancedUnion(ty, mod, strat, union_obj, union_type.hasTag());
                 },
                 .opaque_type => unreachable, // no size available
+                .enum_type => @panic("TODO"),
 
                 // values, not types
                 .un => unreachable,
@@ -2979,6 +2985,7 @@ pub const Type = struct {
                     return size;
                 },
                 .opaque_type => unreachable,
+                .enum_type => @panic("TODO"),
 
                 // values, not types
                 .un => unreachable,
@@ -3744,6 +3751,7 @@ pub const Type = struct {
                     assert(struct_obj.layout == .Packed);
                     ty = struct_obj.backing_int_ty;
                 },
+                .enum_type => @panic("TODO"),
 
                 .ptr_type => unreachable,
                 .array_type => unreachable,
@@ -4139,6 +4147,7 @@ pub const Type = struct {
                     return only.toValue();
                 },
                 .opaque_type => return null,
+                .enum_type => @panic("TODO"),
 
                 // values, not types
                 .un => unreachable,
@@ -4307,6 +4316,8 @@ pub const Type = struct {
                 },
 
                 .opaque_type => false,
+
+                .enum_type => @panic("TODO"),
 
                 // values, not types
                 .un => unreachable,
